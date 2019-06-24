@@ -470,9 +470,3 @@ def upload_app(module, file_name, com_port):
     m.uploadApplication(module, file_name)
     m.end()
     return 0
-
-m = MT2625( Serial("/dev/ttyUSB0", 115200) )
-m.connect(9.0)
-m.begin()
-m.uploadApplication("bc66", sys.argv[1])
-m.end()
