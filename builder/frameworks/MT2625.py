@@ -126,13 +126,15 @@ class MT2625:
         }
     }
 
-    def __init__(self, ser):
+    def __init__(self, ser, auto_reset):
         self.s = ser
         self.dir = os.path.dirname( os.path.realpath(__file__) )
         self.nvdm_address = 0
         self.nvdm_length = 0
-        self.s.dtr = 1
-        self.s.rts = 1
+        self.auto_reset = auto_reset
+        if self.auto_reset:
+            self.s.dtr = 1
+            self.s.rts = 1
 
     def read(self, read_size = 0):
         r = ""
@@ -166,17 +168,18 @@ class MT2625:
         self.s.timeout = 0.01
         step = 0
 
-        # Toggle PWR key for 600ms
-        self.s.dtr = 0
-        time.sleep(0.6)
-        self.s.dtr = 1
+        if self.auto_reset:
+            # Toggle PWR key for 600ms
+            self.s.dtr = 0
+            time.sleep(0.6)
+            self.s.dtr = 1
 
-        time.sleep(0.1)
+            time.sleep(0.1)
 
-        # Toggle RST for 100ms
-        self.s.rts = 0
-        time.sleep(0.1)
-        self.s.rts = 1
+            # Toggle RST for 100ms
+            self.s.rts = 0
+            time.sleep(0.1)
+            self.s.rts = 1
 
         PB_BEGIN( 'Wait for Power ON or Reset module <' )
         while True:
@@ -348,9 +351,10 @@ class MT2625:
     def end(self):
         self.s.write(DA_FINISH+'\x00')
         ASSERT( self.s.read(1) == b'\x5A', "Finish")
-        self.s.dtr = 0
-        time.sleep(0.6)
-        self.s.dtr = 1
+        if self.auto_reset:
+            self.s.dtr = 0
+            time.sleep(0.6)
+            self.s.dtr = 1
 
     def begin(self, nvdm = 0):
         ASSERT( self.chip in self.DA, "Unknown module: {}".format(self.chip) )
@@ -462,9 +466,9 @@ class MT2625:
         PB_END()
         DBG("Application <{}> READY".format(self.app_name ))
 
-def upload_app(module, file_name, com_port):
+def upload_app(module, file_name, com_port, auto_reset = False):
     ASSERT( os.path.isfile(file_name) == True, "No such file: " + file_name )
-    m = MT2625( Serial(com_port, 115200) )
+    m = MT2625( Serial(com_port, 115200), auto_reset )
     m.connect(9.0)
     m.begin()
     m.uploadApplication(module, file_name)
